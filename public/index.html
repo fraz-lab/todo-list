@@ -1,43 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mui/material@7.3.2/umd/mui.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mui/icons-material@7.3.2/umd/mui-icons-material.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background-color: #f0f2f5;
+      min-height: 100vh;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+    const { Container, Card, CardContent, TextField, Button, Typography, Box, Checkbox, LinearProgress, List, ListItem, ListItemText, Stack } = window['@mui/material'];
+    const { Add: AddIcon } = window['@mui/icons-material'];
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+    function App() {
+      const [tasks, setTasks] = useState([]);
+      const [newTask, setNewTask] = useState('');
+      const [selectedTask, setSelectedTask] = useState(null);
+      const [newSubTask, setNewSubTask] = useState('');
+      const [error, setError] = useState('');
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+      const addPrimaryTask = (e) => {
+        e.preventDefault();
+        if (!newTask.trim()) {
+          setError('Primary task cannot be empty');
+          return;
+        }
+        setTasks([...tasks, {
+          id: Date.now(),
+          title: newTask,
+          subTasks: [],
+        }]);
+        setNewTask('');
+        setError('');
+      };
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+      const addSubTask = (e, parentId) => {
+        e.preventDefault();
+        if (!newSubTask.trim()) {
+          setError('Subtask cannot be empty');
+          return;
+        }
+        setTasks(tasks.map(task => {
+          if (task.id === parentId) {
+            return {
+              ...task,
+              subTasks: [...task.subTasks, {
+                id: Date.now(),
+                title: newSubTask,
+                completed: false
+              }]
+            };
+          }
+          return task;
+        }));
+        setNewSubTask('');
+        setSelectedTask(null);
+        setError('');
+      };
+
+      const toggleSubTask = (taskId, subTaskId) => {
+        setTasks(tasks.map(task => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              subTasks: task.subTasks.map(subTask => {
+                if (subTask.id === subTaskId) {
+                  return { ...subTask, completed: !subTask.completed };
+                }
+                return subTask;
+              })
+            };
+          }
+          return task;
+        }));
+      };
+
+      const calculateProgress = (task) => {
+        if (task.subTasks.length === 0) return 0;
+        const completedTasks = task.subTasks.filter(st => st.completed).length;
+        return (completedTasks / task.subTasks.length) * 100;
+      };
+
+      return (
+        <Container maxWidth="md" className="py-8">
+          <Typography variant="h3" className="text-center text-blue-600 mb-8 font-bold">
+            Todo List
+          </Typography>
+
+          {error && (
+            <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
+              {error}
+            </div>
+          )}
+
+          <Stack component="form" onSubmit={addPrimaryTask} direction="row" spacing={2} className="mb-8">
+            <TextField
+              fullWidth
+              variant="outlined"
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              placeholder="Add a primary task"
+              className="bg-white rounded"
+              inputProps={{ 'data-testid': 'primary-task-input' }}
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+              startIcon={<AddIcon />}
+            >
+              Add Task
+            </Button>
+          </Stack>
+
+          <List>
+            {tasks.map(task => (
+              <Card key={task.id} className="mb-4 bg-white rounded-lg shadow-md">
+                <CardContent>
+                  <Typography variant="h6" className="font-semibold text-gray-800">
+                    {task.title}
+                  </Typography>
+
+                  <LinearProgress
+                    variant="determinate"
+                    value={calculateProgress(task)}
+                    className="my-4 h-2 rounded"
+                    sx={{
+                      '& .MuiLinearProgress-bar': {
+                        backgroundColor: '#2196f3'
+                      }
+                    }}
+                  />
+
+                  <List dense>
+                    {task.subTasks.map(subTask => (
+                      <ListItem key={subTask.id} className="py-1">
+                        <Checkbox
+                          checked={subTask.completed}
+                          onChange={() => toggleSubTask(task.id, subTask.id)}
+                          className="text-blue-500"
+                          inputProps={{ 'data-testid': `subtask-checkbox-${subTask.id}` }}
+                        />
+                        <ListItemText
+                          primary={subTask.title}
+                          className={subTask.completed ? 'line-through text-gray-500' : 'text-gray-800'}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+
+                  {selectedTask === task.id ? (
+                    <Box component="form" onSubmit={(e) => addSubTask(e, task.id)} className="mt-4">
+                      <TextField
+                        fullWidth
+                        size="small"
+                        value={newSubTask}
+                        onChange={(e) => setNewSubTask(e.target.value)}
+                        placeholder="Add a subtask"
+                        className="bg-white rounded mr-2"
+                        inputProps={{ 'data-testid': `subtask-input-${task.id}` }}
+                        InputProps={{
+                          endAdornment: (
+                            <Button
+                              type="submit"
+                              variant="contained"
+                              className="bg-blue-500 hover:bg-blue-600 text-white"
+                              size="small"
+                              startIcon={<AddIcon />}
+                            >
+                              Add
+                            </Button>
+                          ),
+                        }}
+                      />
+                    </Box>
+                  ) : (
+                    <Button
+                      onClick={() => setSelectedTask(task.id)}
+                      variant="outlined"
+                      className="mt-4 border-blue-500 text-blue-500 hover:bg-blue-50"
+                      size="small"
+                      startIcon={<AddIcon />}
+                    >
+                      Add Subtask
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </List>
+        </Container>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
 </html>
